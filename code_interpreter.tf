@@ -5,7 +5,7 @@ resource "awscc_bedrockagentcore_code_interpreter_custom" "code_interpreter" {
 
   name               = each.key
   description        = each.value.description
-  execution_role_arn = each.value.execution_role_arn != null ? each.value.execution_role_arn : aws_iam_role.code_interpreter[each.key].arn
+  execution_role_arn = each.value.create_execution_role ? aws_iam_role.code_interpreter[each.key].arn : each.value.execution_role_arn
 
   network_configuration = {
     network_mode = each.value.network_mode

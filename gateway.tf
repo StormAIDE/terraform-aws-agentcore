@@ -9,7 +9,7 @@ resource "awscc_bedrockagentcore_gateway" "gateway" {
 
   name             = each.key
   description      = each.value.description
-  role_arn         = each.value.role_arn != null ? each.value.role_arn : aws_iam_role.gateway[each.key].arn
+  role_arn         = each.value.create_role ? aws_iam_role.gateway[each.key].arn : each.value.role_arn
   authorizer_type  = each.value.authorizer_type
   protocol_type    = each.value.protocol_type
   exception_level  = each.value.exception_level

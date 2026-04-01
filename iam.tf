@@ -33,7 +33,7 @@ resource "aws_iam_role" "runtime" {
   for_each = {
     for name, config in var.runtimes :
     name => config
-    if config.execution_role_arn == null
+    if config.create_execution_role
   }
 
   name                 = "${var.project_prefix}-${each.key}-runtime"
@@ -61,7 +61,7 @@ data "aws_iam_policy_document" "runtime_policy" {
   for_each = {
     for name, config in var.runtimes :
     name => config
-    if config.execution_role_arn == null
+    if config.create_execution_role
   }
 
   statement {
@@ -305,7 +305,7 @@ resource "aws_iam_role" "gateway" {
   for_each = {
     for name, config in var.gateways :
     name => config
-    if config.role_arn == null
+    if config.create_role
   }
 
   name               = "${var.project_prefix}-${each.key}-gateway"
@@ -344,7 +344,7 @@ data "aws_iam_policy_document" "gateway_policy" {
   for_each = {
     for name, config in var.gateways :
     name => config
-    if config.role_arn == null
+    if config.create_role
   }
 
   statement {
@@ -391,7 +391,7 @@ resource "aws_iam_role" "memory" {
   for_each = {
     for name, config in var.memories :
     name => config
-    if config.execution_role_arn == null && length(config.strategies) > 0
+    if config.create_execution_role && length(config.strategies) > 0
   }
 
   name               = "${var.project_prefix}-${each.key}-memory"
@@ -427,7 +427,7 @@ resource "aws_iam_role" "browser" {
   for_each = {
     for name, config in var.browsers :
     name => config
-    if config.execution_role_arn == null
+    if config.create_execution_role
   }
 
   name               = "${var.project_prefix}-${each.key}-browser"
@@ -466,7 +466,7 @@ data "aws_iam_policy_document" "browser_policy" {
   for_each = {
     for name, config in var.browsers :
     name => config
-    if config.execution_role_arn == null
+    if config.create_execution_role
   }
 
   statement {
@@ -502,7 +502,7 @@ resource "aws_iam_role" "code_interpreter" {
   for_each = {
     for name, config in var.code_interpreters :
     name => config
-    if config.execution_role_arn == null
+    if config.create_execution_role
   }
 
   name               = "${var.project_prefix}-${each.key}-code-interpreter"
@@ -541,7 +541,7 @@ data "aws_iam_policy_document" "code_interpreter_policy" {
   for_each = {
     for name, config in var.code_interpreters :
     name => config
-    if config.execution_role_arn == null
+    if config.create_execution_role
   }
 
   statement {
