@@ -9,7 +9,7 @@ resource "awscc_bedrockagentcore_runtime" "runtime_code" {
 
   agent_runtime_name = each.key
   description        = each.value.description
-  role_arn           = each.value.execution_role_arn != null ? each.value.execution_role_arn : aws_iam_role.runtime[each.key].arn
+  role_arn           = each.value.create_execution_role ? aws_iam_role.runtime[each.key].arn : each.value.execution_role_arn
 
   agent_runtime_artifact = {
     code_configuration = {
@@ -52,7 +52,7 @@ resource "awscc_bedrockagentcore_runtime" "runtime_container" {
 
   agent_runtime_name = each.key
   description        = each.value.description
-  role_arn           = each.value.execution_role_arn != null ? each.value.execution_role_arn : aws_iam_role.runtime[each.key].arn
+  role_arn           = each.value.create_execution_role ? aws_iam_role.runtime[each.key].arn : each.value.execution_role_arn
 
   agent_runtime_artifact = {
     container_configuration = {

@@ -53,7 +53,8 @@ variable "runtimes" {
     container_image_uri = optional(string)
 
     # Shared configuration
-    execution_role_arn       = optional(string) # Required for user-managed
+    execution_role_arn       = optional(string) # Required when create_execution_role = false
+    create_execution_role    = optional(bool, true) # Set to false to provide your own execution_role_arn
     description              = optional(string)
     execution_network_mode   = optional(string, "PUBLIC")
     execution_network_config = optional(object({
@@ -125,17 +126,17 @@ variable "runtimes" {
   validation {
     condition = alltrue([
       for name, config in var.runtimes :
-      !(config.source_type == "CODE" && config.code_s3_bucket != null && config.execution_role_arn == null)
+      !(config.source_type == "CODE" && config.code_s3_bucket != null && config.create_execution_role)
     ])
-    error_message = "execution_role_arn is required when using user-managed CODE (code_s3_bucket provided)."
+    error_message = "create_execution_role must be false (and execution_role_arn must be provided) when using user-managed CODE (code_s3_bucket provided)."
   }
 
   validation {
     condition = alltrue([
       for name, config in var.runtimes :
-      !(config.source_type == "CONTAINER" && config.container_image_uri != null && config.execution_role_arn == null)
+      !(config.source_type == "CONTAINER" && config.container_image_uri != null && config.create_execution_role)
     ])
-    error_message = "execution_role_arn is required when using user-managed CONTAINER (container_image_uri provided)."
+    error_message = "create_execution_role must be false (and execution_role_arn must be provided) when using user-managed CONTAINER (container_image_uri provided)."
   }
 
   validation {
@@ -155,6 +156,7 @@ variable "memories" {
     description           = optional(string)
     event_expiry_duration = optional(number, 90)
     execution_role_arn    = optional(string)
+    create_execution_role = optional(bool, true) # Set to false to provide your own execution_role_arn
     encryption_key_arn    = optional(string)
     
     strategies = optional(list(object({
@@ -246,6 +248,7 @@ variable "gateways" {
   type = map(object({
     description      = optional(string)
     role_arn         = optional(string)
+    create_role      = optional(bool, true) # Set to false to provide your own role_arn
     authorizer_type  = optional(string, "AWS_IAM")
     protocol_type    = optional(string, "MCP")
     exception_level  = optional(string, "DEBUG")
@@ -365,6 +368,7 @@ variable "browsers" {
   type = map(object({
     description          = optional(string)
     execution_role_arn   = optional(string)
+    create_execution_role = optional(bool, true) # Set to false to provide your own execution_role_arn
     network_mode         = optional(string, "PUBLIC")
     
     network_configuration = optional(object({
@@ -391,6 +395,7 @@ variable "code_interpreters" {
   type = map(object({
     description          = optional(string)
     execution_role_arn   = optional(string)
+    create_execution_role = optional(bool, true) # Set to false to provide your own execution_role_arn
     network_mode         = optional(string, "SANDBOX")
     
     network_configuration = optional(object({

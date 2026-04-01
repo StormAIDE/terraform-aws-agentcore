@@ -7,7 +7,7 @@ resource "awscc_bedrockagentcore_memory" "memory" {
   description               = each.value.description
   event_expiry_duration     = each.value.event_expiry_duration
   encryption_key_arn        = each.value.encryption_key_arn
-  memory_execution_role_arn = each.value.execution_role_arn != null ? each.value.execution_role_arn : try(aws_iam_role.memory[each.key].arn, null)
+  memory_execution_role_arn = each.value.create_execution_role ? try(aws_iam_role.memory[each.key].arn, null) : each.value.execution_role_arn
 
   memory_strategies = [
     for strategy in each.value.strategies : {
