@@ -154,35 +154,52 @@ resource "aws_codebuild_project" "runtime_code" {
   tags = local.merged_tags
 }
 
-# Action: Start CODE build
-action "aws_codebuild_start_build" "code" {
-  for_each = {
-    for name, config in var.runtimes :
-    name => config
-    if config.source_type == "CODE" && config.code_source_path != null
-  }
-
-  config {
-    project_name = aws_codebuild_project.runtime_code[each.key].name
-    timeout      = 900
-  }
-}
-
 # Trigger CODE build on source change
-resource "terraform_data" "build_trigger_code" {
+resource "null_resource" "build_trigger_code" {
   for_each = {
     for name, config in var.runtimes :
     name => config
     if config.source_type == "CODE" && config.code_source_path != null
   }
 
-  input = data.archive_file.runtime_source[each.key].output_md5
+  triggers = {
+    source_hash = data.archive_file.runtime_source[each.key].output_md5
+  }
 
-  lifecycle {
-    action_trigger {
-      events  = [before_create, before_update]
-      actions = [action.aws_codebuild_start_build.code[each.key]]
-    }
+  provisioner "local-exec" {
+    command = <<-EOT
+      BUILD_ID=$(aws codebuild start-build \
+        --project-name ${aws_codebuild_project.runtime_code[each.key].name} \
+        --region ${data.aws_region.current.id} \
+        --query 'build.id' --output text) || { echo "ERROR: Failed to start CODE build"; exit 1; }
+      if [ -z "$BUILD_ID" ] || [ "$BUILD_ID" = "None" ]; then
+        echo "ERROR: start-build returned empty build ID"
+        exit 1
+      fi
+      echo "Started CODE build: $BUILD_ID"
+      for i in $(seq 1 90); do
+        STATUS=$(aws codebuild batch-get-builds \
+          --ids "$BUILD_ID" \
+          --region ${data.aws_region.current.id} \
+          --query 'builds[0].buildStatus' --output text) || { echo "WARNING: Failed to query build status, retrying..."; sleep 10; continue; }
+        if [ -z "$STATUS" ] || [ "$STATUS" = "None" ]; then
+          echo "WARNING: Empty build status returned, retrying..."
+          sleep 10
+          continue
+        fi
+        echo "Build status ($i/90): $STATUS"
+        if [ "$STATUS" = "SUCCEEDED" ]; then
+          echo "Build succeeded"
+          exit 0
+        elif [ "$STATUS" = "FAILED" ] || [ "$STATUS" = "FAULT" ] || [ "$STATUS" = "STOPPED" ] || [ "$STATUS" = "TIMED_OUT" ]; then
+          echo "Build failed with status: $STATUS"
+          exit 1
+        fi
+        sleep 10
+      done
+      echo "Build timed out after 900 seconds"
+      exit 1
+    EOT
   }
 
   depends_on = [
@@ -192,35 +209,52 @@ resource "terraform_data" "build_trigger_code" {
   ]
 }
 
-# Action: Start CONTAINER build
-action "aws_codebuild_start_build" "container" {
-  for_each = {
-    for name, config in var.runtimes :
-    name => config
-    if config.source_type == "CONTAINER" && config.container_source_path != null
-  }
-
-  config {
-    project_name = aws_codebuild_project.runtime_container[each.key].name
-    timeout      = 3600
-  }
-}
-
 # Trigger CONTAINER build on source change
-resource "terraform_data" "build_trigger_container" {
+resource "null_resource" "build_trigger_container" {
   for_each = {
     for name, config in var.runtimes :
     name => config
     if config.source_type == "CONTAINER" && config.container_source_path != null
   }
 
-  input = data.archive_file.runtime_source[each.key].output_md5
+  triggers = {
+    source_hash = data.archive_file.runtime_source[each.key].output_md5
+  }
 
-  lifecycle {
-    action_trigger {
-      events  = [before_create, before_update]
-      actions = [action.aws_codebuild_start_build.container[each.key]]
-    }
+  provisioner "local-exec" {
+    command = <<-EOT
+      BUILD_ID=$(aws codebuild start-build \
+        --project-name ${aws_codebuild_project.runtime_container[each.key].name} \
+        --region ${data.aws_region.current.id} \
+        --query 'build.id' --output text) || { echo "ERROR: Failed to start CONTAINER build"; exit 1; }
+      if [ -z "$BUILD_ID" ] || [ "$BUILD_ID" = "None" ]; then
+        echo "ERROR: start-build returned empty build ID"
+        exit 1
+      fi
+      echo "Started CONTAINER build: $BUILD_ID"
+      for i in $(seq 1 360); do
+        STATUS=$(aws codebuild batch-get-builds \
+          --ids "$BUILD_ID" \
+          --region ${data.aws_region.current.id} \
+          --query 'builds[0].buildStatus' --output text) || { echo "WARNING: Failed to query build status, retrying..."; sleep 10; continue; }
+        if [ -z "$STATUS" ] || [ "$STATUS" = "None" ]; then
+          echo "WARNING: Empty build status returned, retrying..."
+          sleep 10
+          continue
+        fi
+        echo "Build status ($i/360): $STATUS"
+        if [ "$STATUS" = "SUCCEEDED" ]; then
+          echo "Build succeeded"
+          exit 0
+        elif [ "$STATUS" = "FAILED" ] || [ "$STATUS" = "FAULT" ] || [ "$STATUS" = "STOPPED" ] || [ "$STATUS" = "TIMED_OUT" ]; then
+          echo "Build failed with status: $STATUS"
+          exit 1
+        fi
+        sleep 10
+      done
+      echo "Build timed out after 3600 seconds"
+      exit 1
+    EOT
   }
 
   depends_on = [

@@ -37,7 +37,7 @@ resource "awscc_bedrockagentcore_runtime" "runtime_code" {
 
   depends_on = [
     time_sleep.iam_role_propagation,
-    terraform_data.build_trigger_code
+    null_resource.build_trigger_code
   ]
 }
 
@@ -72,7 +72,7 @@ resource "awscc_bedrockagentcore_runtime" "runtime_container" {
   tags                  = merge(local.merged_tags, each.value.tags)
 
   depends_on = [
-    terraform_data.build_trigger_container,
+    null_resource.build_trigger_container,
     time_sleep.iam_role_propagation
   ]
 }
